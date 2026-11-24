@@ -1,52 +1,57 @@
 #include "ProcessC.h"
-#include <windows.h>
 #include <psapi.h>
-#include <isotream>
-#include <vector>
-#pragma comment(lib,"psapi.lib")
+#include <iostream>
 
-using namespace std;
-vector<Process> ProcessC::collectProcess(){
-    vector<Process> processes;
+#pragma comment(lib, "psapi.lib")
+
+std::vector<Process> ProcessC::collectProcesses() {
+    std::vector<Process> processes;
     DWORD processIDs[1024];
-    DWORD baitReturned;
-    if(!EnumProcesses(processIDs, sizeof(processIDs), &baitReturned)){
-        cerr<<"Ошибка при получени списка процессво" <<endl;
+    DWORD bytesReturned;
+
+    if (!EnumProcesses(processIDs, sizeof(processIDs), &bytesReturned)) {
+        std::cerr << "Ошибка при получении списка процессов" << std::endl;
         return processes;
     }
-    DWORD numProcesses =baitReturned / sizeof(DWORD);
+
+    DWORD numProcesses = bytesReturned / sizeof(DWORD);
 
     for (DWORD i = 0; i < numProcesses; i++) {
-        if(processIDs[i] !=0){
+        if (processIDs[i] != 0) {
             Process info = getProcess(processIDs[i]);
-            if (info.pid != 0){
+            if (info.pid != 0) {
                 processes.push_back(info);
             }
         }
     }
-    return porceeses;
+
+    return processes;
 }
 
-PRocess ProcessC::getProcess(DWORD porcessId){
+Process ProcessC::getProcess(DWORD processID) {
     Process info;
 
-    HANDLE hProcess = OpenPRocess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
-    if (hProcess == NULL){
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+    if (hProcess == NULL) {
         return info;
     }
+
     HMODULE hMod;
-    DWORD cdNeeded;
-    if(EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cdNeeded)){
+    DWORD cbNeeded;
+    if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded)) {
         char processName[MAX_PATH];
         GetModuleBaseNameA(hProcess, hMod, processName, sizeof(processName));
         info.name = processName;
     }
+
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
-        info.memoryUsage = pmc.WorkingSetSize;
+        info.memoryUse = pmc.WorkingSetSize;
     }
-    info.pid = processID; 
+
+    info.pid = processID;
     info.status = "Running";
+
     CloseHandle(hProcess);
     return info;
 }
